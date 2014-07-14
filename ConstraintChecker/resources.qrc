@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/plugins/constraintchecker" >
+        <file>checker_config_32.png</file>
+		<file>checker_freehand_32.png</file>
+		<file>checker_select_32.png</file>
+    </qresource>
+</RCC>
