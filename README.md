@@ -1,0 +1,2 @@
+qgis-constraint-checker-plugin
+==============================
