@@ -32,6 +32,7 @@ class FreehandPolygonMaptool(QgsMapTool):
         QgsMapTool.__init__(self,canvas)
         self.canvas = canvas
         self.rb = QgsRubberBand(canvas, QGis.Polygon)
+        self.rb.setColor(QColor(255, 0, 0, 50))
     
     def activate(self):
         self.rb.reset(QGis.Polygon)
