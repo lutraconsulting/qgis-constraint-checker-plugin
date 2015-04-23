@@ -173,7 +173,7 @@ class Checker:
                 continue
             queryString = """SELECT """
             for col in configItem['columns']:
-                queryString += col + ', '
+                queryString += '"%s"' % col.strip() + ', '
             # Remove last two chars
             queryString = queryString[:-2]
             queryString += """ FROM "%s"."%s" WHERE ST_Intersects(geom, ST_Buffer(ST_GeomFromText('%s', %d), %f))""" % (configItem['schema'], configItem['table'], wkt, epsg_code, configItem['buffer_distance'])
