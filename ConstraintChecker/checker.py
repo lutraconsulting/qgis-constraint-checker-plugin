@@ -176,7 +176,7 @@ class Checker:
                 queryString += col + ', '
             # Remove last two chars
             queryString = queryString[:-2]
-            queryString += """ FROM "%s"."%s" WHERE ST_Intersects(geom, ST_Buffer(ST_GeomFromText('%s', %d), %f))""" % (configItem['schema'], configItem['table'], wkt, epsg_code, configItem['buffer_distance'])
+            queryString += """ FROM "%s"."%s" WHERE ST_Intersects(%s, ST_Buffer(ST_GeomFromText('%s', %d), %f))""" % (configItem['schema'], configItem['table'], configItem['geom_column'], wkt, epsg_code, configItem['buffer_distance'])
             cur.execute(queryString)
             
             # FIXME
