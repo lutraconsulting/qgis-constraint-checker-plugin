@@ -31,7 +31,7 @@ TRANSLATIONS =
 
 # global
 
-PLUGINNAME = constraintchecker
+PLUGINNAME = ConstraintChecker
 
 PY_FILES = constraintchecker.py constraintcheckerdialog.py __init__.py
 
