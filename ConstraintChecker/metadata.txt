@@ -1,27 +1,22 @@
-# This file contains metadata for your plugin. Beginning
-# with version 1.8 this is the preferred way to supply information about a
-# plugin. The current method of embedding metadata in __init__.py will
-# be supported until version 2.0
-
-# This file should be included when you package your plugin.
-
-# Mandatory items:
-
 
 [general]
 name=Constraint Checker
 qgisMinimumVersion=2.0
 description=Generate reports of constraints (e.g. planning constraints) applicable to an area of interest.
-version=1.1.0
+version=1.1.1
 author=Lutra Consulting for Dartmoor National Park Authority
 email=it@dnpa.gov.uk
+
+about=Generate reports of constraints (e.g. planning constraints) applicable to an area of interest.
 
 # end of mandatory metadata
 
 # Optional items:
 
 # Uncomment the following line and add your changelog entries:
-changelog=1.1.0 - New features:
+changelog=1.1.1 - Fixes:
+  - rubber band color, geometry column configuration (from Matt Travis)
+ <p>1.1.0 - New features:
   - New icons.
  <p>1.0.0 - New features:
   - Support for exporting and importing configurations through the GUI.
