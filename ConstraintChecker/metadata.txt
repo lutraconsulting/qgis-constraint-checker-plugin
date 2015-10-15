@@ -27,7 +27,7 @@ changelog=1.1.2 - Bug fixes:
 # tags are comma separated with spaces allowed
 tags=planning constraints,constraints,constraint reporting
 
-homepage=https://github.com/lutraconsulting/qgis-constraint-checker-plugin
+homepage=http://www.lutraconsulting.co.uk/products/constraintchecker/
 tracker=https://github.com/lutraconsulting/qgis-constraint-checker-plugin/issues
 repository=https://github.com/lutraconsulting/qgis-constraint-checker-plugin
 icon=checker_config_32.png
