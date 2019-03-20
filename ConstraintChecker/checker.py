@@ -79,7 +79,7 @@ class ResultModel(QAbstractTableModel):
             return self.headerNames[section]
     
 
-class Checker:
+class Checker(object):
 
     def __init__(self, iface, refNumber):
         

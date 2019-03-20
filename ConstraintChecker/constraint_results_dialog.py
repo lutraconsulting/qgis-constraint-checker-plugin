@@ -46,23 +46,23 @@ class ConstraintResultsDialog(QDialog):
         settings = QSettings()
         lastFolder = str(settings.value("constraintchecker/lastSaveFolder", os.sep))
         
-        outFileName = QFileDialog.getSaveFileName(self, 'Save Query Results', lastFolder,
+        outFileName, ext_selector = QFileDialog.getSaveFileName(self, 'Save Query Results', lastFolder,
                                                       'Comma Separated Variable Files (*.csv)')
         
         # Store the path we just looked in
-        head, tail = os.path.split(outFileName[0])
+        head, tail = os.path.split(outFileName)
         if head != os.sep and head.lower() != 'c:\\' and head != '':
             settings.setValue("constraintchecker/lastSaveFolder", head)
         
-        if len(outFileName[0]) == 0:
+        if len(outFileName) == 0:
             # User hit cancel
             return
         
         # Export the file
         try:
-            csvfile = open(outFileName[0]+'.csv', 'w')
+            csvfile = open(outFileName+'.csv', 'w')
         except:
-            msg = 'Failed to open %s for writing - perhaps it is open in another application?' % outFileName[0]
+            msg = 'Failed to open %s for writing - perhaps it is open in another application?' % outFileName
             QMessageBox.critical(self, 'Failed to Open File', msg)
             return
         

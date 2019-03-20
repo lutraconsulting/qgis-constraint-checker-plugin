@@ -140,19 +140,19 @@ class ConfigurationDialog(QDialog):
         settings = QSettings()
         lastFolder = str(settings.value('constraintchecker/lastExportFolder', os.sep))
 
-        exportFileName = QFileDialog.getSaveFileName(self, 'Export Current Configuration', lastFolder,
+        exportFileName, ext_selector = QFileDialog.getSaveFileName(self, 'Export Current Configuration', lastFolder,
                                                          'Constraint Checker Configuration Files (*.ini)')
-        if len(exportFileName[0]) == 0:
+        if len(exportFileName) == 0:
             # User cancelled
             return
         
         # Store the path we just looked in
-        head, tail = os.path.split(exportFileName[0])
+        head, tail = os.path.split(exportFileName)
         if head != os.sep and head.lower() != 'c:\\' and head != '':
             settings.setValue('constraintchecker/lastExportFolder', head)
         
         # Export the configuration
-        file_name = "{}.ini".format(exportFileName[0])
+        file_name = "{}.ini".format(exportFileName)
         try:
             self.saveConfiguration(file_name)
         except:
@@ -165,23 +165,23 @@ class ConfigurationDialog(QDialog):
         settings = QSettings()
         lastFolder = str(settings.value('constraintchecker/lastImportFolder', os.sep))
         
-        importFileName = QFileDialog.getOpenFileName(self, 'Import Configuration', lastFolder,
+        importFileName, ext_selector = QFileDialog.getOpenFileName(self, 'Import Configuration', lastFolder,
                                                          'Constraint Checker Configuration Files (*.ini)')
-        if len(importFileName[0]) == 0:
+        if len(importFileName) == 0:
             # User cancelled
             return
         
         # Store the path we just looked in
-        head, tail = os.path.split(importFileName[0])
+        head, tail = os.path.split(importFileName)
         if head != os.sep and head.lower() != 'c:\\' and head != '':
             settings.setValue('constraintchecker/lastImportFolder', head)
         
         # Import the configuration
         try:
-            self.readConfiguration(importFileName[0])
+            self.readConfiguration(importFileName)
         except:
             QMessageBox.critical(self.iface.mainWindow(), 'Error', 'Failed to read configuration from %s' %
-                                 importFileName[0])
+                                 importFileName)
 
     def saveConfiguration(self, filePath=None):
         """ Run through the configuration, do basic checks on each item 

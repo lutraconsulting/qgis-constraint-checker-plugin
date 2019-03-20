@@ -62,13 +62,13 @@ class ConstraintChecker:
     def initGui(self):
         # Create action that will start plugin configuration
         self.existingCheckAction = QAction(
-            QIcon("/plugins/ConstraintChecker/images/checker_select_32.png"),
+            QIcon(os.path.join(self.plugin_dir, "images/checker_select_32.png")),
             "Check Constraints for Existing Polygon", self.iface.mainWindow())
         self.freehandCheckAction = QAction(
-            QIcon("/plugins/ConstraintChecker/images/checker_freehand_32.png"),
+            QIcon(os.path.join(self.plugin_dir, "images/checker_freehand_32.png")),
             "Check Constraints for Free-hand Polygon", self.iface.mainWindow())
         self.openConfigurationAction = QAction(
-            QIcon(":/plugins/ConstraintChecker/images/checker_config_32.png"),
+            QIcon(os.path.join(self.plugin_dir, "images/checker_config_32.png")),
             "Edit Configuration", self.iface.mainWindow())
         # connect the action to the run method
         self.existingCheckAction.triggered.connect(self.checkExistingGeometry)
