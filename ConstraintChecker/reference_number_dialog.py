@@ -20,17 +20,21 @@
  ***************************************************************************/
 """
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from ui_reference_number import Ui_Dialog
+import os
+from qgis.PyQt import uic
+from qgis.PyQt.QtWidgets import QDialog
+#from .ui_reference_number import Ui_Dialog
 
-class ReferenceNumberDialog(QDialog, Ui_Dialog):
+ui_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ui', 'ui_reference_number.ui')
+
+
+class ReferenceNumberDialog(QDialog):
     
     def __init__(self):
         QDialog.__init__(self)
         # Set up the user interface from Designer.
-        self.setupUi(self)
-    
+        self.ui = uic.loadUi(ui_file, self)
+
     def getRefNumber(self):
         return self.referenceNumberLineEdit.text()
 

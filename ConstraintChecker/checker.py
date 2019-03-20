@@ -19,16 +19,16 @@
  *                                                                         *
  ***************************************************************************/
 """
-
-# Import the PyQt and QGIS libraries
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from qgis.core import *
-
-from constraint_results_dialog import ConstraintResultsDialog
 import psycopg2
-import ConfigParser
+import configparser
 import os
+# Import the PyQt and QGIS libraries
+from qgis.PyQt.QtCore import Qt, QAbstractTableModel, QModelIndex, QAbstractItemModel, QSettings
+from qgis.PyQt.QtWidgets import QMessageBox
+from qgis.core import QgsAuthMethodConfig, QgsApplication
+
+from .constraint_results_dialog import ConstraintResultsDialog
+
 
 class ResultModel(QAbstractTableModel):
     
@@ -67,7 +67,7 @@ class ResultModel(QAbstractTableModel):
     def fetchRow(self, rowNumber):
         return self.data[rowNumber]
     
-    def headerData(self, section, orientation, role = Qt.DisplayRole):
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
         
         if role != Qt.DisplayRole:
             # We are being asked for something else, do the default implementation
@@ -78,18 +78,16 @@ class ResultModel(QAbstractTableModel):
         else:
             return self.headerNames[section]
     
-    
 
 class Checker:
-    
-    
+
     def __init__(self, iface, refNumber):
         
         self.iface = iface
         self.refNumber = refNumber
         
         # Read the config
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         configFilePath = os.path.join(os.path.dirname(__file__), 'config.cfg')
         config.read(configFilePath)
         
@@ -100,7 +98,7 @@ class Checker:
             c['schema'] = config.get(section, 'schema')
             c['table'] = config.get(section, 'table')
             c['geom_column'] = config.get(section, 'geom_column')
-            c['buffer_distance'] = float( config.get(section, 'buffer_distance') )
+            c['buffer_distance'] = float(config.get(section, 'buffer_distance'))
             c['columns'] = config.get(section, 'columns').split(',')
             include = config.get(section, 'include')
             if include.lower() == 't':
@@ -118,16 +116,15 @@ class Checker:
         for i in range(maxColsRequested):
             headerNames.append('Column%d' % (i+1))
         self.resModel = ResultModel(maxColsRequested + 2, headerNames)
-        
-    
+
     def display(self):
         # Only display the results if some constraints were detected
         if self.resModel.rowCount() == 0:
-            QMessageBox.information(self.iface.mainWindow(), 'No constraints found', 'The query did not locate any constraints.')
+            QMessageBox.information(self.iface.mainWindow(),
+                                    'No constraints found', 'The query did not locate any constraints.')
             return
         crd = ConstraintResultsDialog(self.resModel)
         crd.exec_()
-
     
     def getDbCursor(self):
         """
@@ -141,30 +138,44 @@ class Checker:
         selectedConnection = str(s.value("constraintchecker/postgisConnection", ''))
         if len(selectedConnection) == 0:
             # We have not yet specified a connection
-            raise Exception('No PostGIS connection has been nominated for performing constraints queries. \n\nPlease select a PostGIS connection using Plugins > Constraint Checker > Edit Configuration \n\nPostGIS connections can be created in the Add PostGIS Table(s) dialog.')
-            
-        host = str( s.value("PostgreSQL/connections/%s/host" % selectedConnection, '') )
+            raise Exception('No PostGIS connection has been nominated for performing constraints queries. \n\n'
+                            'Please select a PostGIS connection using Plugins > Constraint Checker > Edit Configuration'
+                            ' \n\nPostGIS connections can be created in the Add PostGIS Table(s) dialog.')
+
+        host = str(s.value("PostgreSQL/connections/%s/host" % selectedConnection, ''))
         if len(host) == 0:
             # Looks like the preferred connection could not be found
-            raise Exception('The preferred PostGIS connection, %s could not be found, please check your Constrain Checker settings')
-        database = str( s.value("PostgreSQL/connections/%s/database" % selectedConnection, '') )
-        user = str( s.value("PostgreSQL/connections/%s/username" % selectedConnection, '') )
-        password = str( s.value("PostgreSQL/connections/%s/password" % selectedConnection, '') )
-        port = int( s.value("PostgreSQL/connections/%s/port" % selectedConnection, 5432) )
-        
-        dbConn = psycopg2.connect( database = database,
-                                   user = user,
-                                   password = password,
-                                   host = host,
-                                   port = port)
+            raise Exception('The preferred PostGIS connection, '
+                            '%s could not be found, please check your Constrain Checker settings')
+        database = str(s.value("PostgreSQL/connections/%s/database" % selectedConnection, ''))
+        user = str(s.value("PostgreSQL/connections/%s/username" % selectedConnection, ''))
+        password = str(s.value("PostgreSQL/connections/%s/password" % selectedConnection, ''))
+        port = int(s.value("PostgreSQL/connections/%s/port" % selectedConnection, 5432))
+
+        auth_manager = QgsApplication.authManager()
+        conf = QgsAuthMethodConfig()
+        configs = {v.name(): k for k, v in auth_manager.availableAuthMethodConfigs().items()}
+        # name of config in auth must match the name of selected connection
+        try:
+            auth_manager.loadAuthenticationConfig(configs[selectedConnection], conf, True)
+            if conf.id():
+                user = conf.config('username', '')
+                password = conf.config('password', '')
+        except KeyError:
+            pass
+
+        dbConn = psycopg2.connect(database=database,
+                                  user=user,
+                                  password=password,
+                                  host=host,
+                                  port=port)
         dbConn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         return dbConn.cursor()
-    
-    
+
     def check(self, queryGeom, epsg_code):
         
         # Extract QKT from geometry
-        wkt = queryGeom.exportToWkt()
+        wkt = queryGeom.asWkt()
         
         cur = self.getDbCursor()
         
