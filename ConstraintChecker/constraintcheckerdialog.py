@@ -19,15 +19,15 @@
  *                                                                         *
  ***************************************************************************/
 """
+import os
+from qgis.PyQt import uic
+from qgis.PyQt.QtWidgets import QDialog
+ui_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ui', 'ui_constraintchecker.ui')
 
-from PyQt4 import QtCore, QtGui
-from ui_constraintchecker import Ui_ConstraintChecker
+
 # create the dialog for zoom to point
-
-
-class ConstraintCheckerDialog(QtGui.QDialog):
+class ConstraintCheckerDialog(QDialog):
     def __init__(self):
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
         # Set up the user interface from Designer.
-        self.ui = Ui_ConstraintChecker()
-        self.ui.setupUi(self)
+        self.ui = uic.loadUi(ui_file, self)

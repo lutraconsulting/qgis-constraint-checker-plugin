@@ -20,19 +20,21 @@
  ***************************************************************************/
 """
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from ui_constraint_results import Ui_Dialog
-
 import os
 import csv
+from qgis.PyQt import uic
+from qgis.PyQt.QtCore import QSettings
+from qgis.PyQt.QtWidgets import QDialog, QFileDialog, QMessageBox
 
-class ConstraintResultsDialog(QDialog, Ui_Dialog):
+ui_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ui', 'ui_constraint_results.ui')
+
+
+class ConstraintResultsDialog(QDialog):
     
     def __init__(self, model):
         QDialog.__init__(self)
         # Set up the user interface from Designer.
-        self.setupUi(self)
+        self.ui = uic.loadUi(ui_file, self)
         self.resultModel = model
         self.constraintTableView.setModel(self.resultModel)
         self.constraintTableView.resizeColumnsToContents()
@@ -44,11 +46,12 @@ class ConstraintResultsDialog(QDialog, Ui_Dialog):
         settings = QSettings()
         lastFolder = str(settings.value("constraintchecker/lastSaveFolder", os.sep))
         
-        outFileName = str( QFileDialog.getSaveFileName(self, 'Save Query Results', lastFolder, 'Comma Separated Variable Files (*.csv)') )
+        outFileName, ext_selector = QFileDialog.getSaveFileName(self, 'Save Query Results', lastFolder,
+                                                      'Comma Separated Variable Files (*.csv)')
         
         # Store the path we just looked in
         head, tail = os.path.split(outFileName)
-        if head <> os.sep and head.lower() <> 'c:\\' and head <> '':
+        if head != os.sep and head.lower() != 'c:\\' and head != '':
             settings.setValue("constraintchecker/lastSaveFolder", head)
         
         if len(outFileName) == 0:
@@ -57,14 +60,14 @@ class ConstraintResultsDialog(QDialog, Ui_Dialog):
         
         # Export the file
         try:
-            csvfile = open(outFileName, 'wb')
+            csvfile = open(outFileName+'.csv', 'w')
         except:
-            QMessageBox.critical(self, 'Failed to Open File', 'Failed to open %s for writing - perhaps it is open in another application?' % outFileName )
+            msg = 'Failed to open %s for writing - perhaps it is open in another application?' % outFileName
+            QMessageBox.critical(self, 'Failed to Open File', msg)
             return
         
         resWriter = csv.writer(csvfile)
-        resWriter.writerow( self.resultModel.headerNames )
+        resWriter.writerow(self.resultModel.headerNames)
         for i in range(self.resultModel.rowCount()):
-            resWriter.writerow( self.resultModel.fetchRow(i) )
+            resWriter.writerow(self.resultModel.fetchRow(i))
         csvfile.close()
-        

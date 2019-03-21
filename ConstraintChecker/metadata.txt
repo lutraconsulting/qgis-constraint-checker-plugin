@@ -1,9 +1,10 @@
 
 [general]
 name=Constraint Checker
-qgisMinimumVersion=2.0
+qgisMinimumVersion=3.4
+qgisMaximumVersion=3.99
 description=Generate reports of constraints (e.g. planning constraints) applicable to an area of interest.
-version=1.1.2
+version=1.2
 author=Lutra Consulting for Dartmoor National Park Authority
 email=it@dnpa.gov.uk
 
@@ -14,7 +15,8 @@ about=Generate reports of constraints (e.g. planning constraints) applicable to 
 # Optional items:
 
 # Uncomment the following line and add your changelog entries:
-changelog=1.1.2 - Bug fixes:
+changelog=1.2 - Migration to QGIS 3.x
+ <p>1.1.2 - Bug fixes:
   - rubber band color, geometry column configuration (from Matt Travis)
  <p>1.1.1 - Bug fixes:
   - Support for upper-case letters and spaces in column names.

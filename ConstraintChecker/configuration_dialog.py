@@ -20,26 +20,30 @@
  ***************************************************************************/
 """
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from ui_configuration import Ui_Dialog
-import ConfigParser
+import configparser
 import os
 import traceback
-from utils import dbSafe
+from qgis.PyQt import uic
+from qgis.PyQt.QtCore import Qt, QSettings
+from qgis.PyQt.QtWidgets import QFileDialog, QDialog, QTableWidgetItem, QMessageBox, QAbstractItemView
 
-class ConfigurationDialog(QDialog, Ui_Dialog):
-    
-    def __init__(self):
+from .utils import dbSafe
+
+ui_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ui', 'ui_configuration.ui')
+
+
+class ConfigurationDialog(QDialog):
+
+    def __init__(self, iface):
+        self.iface = iface
         QDialog.__init__(self)
         # Set up the user interface from Designer.
-        self.setupUi(self)
-        
+        self.ui = uic.loadUi(ui_file, self)
+
         self.configFilePath = os.path.join(os.path.dirname(__file__), 'config.cfg')
         self.defFlags = Qt.NoItemFlags | Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
         
-        # Populate the PostGIS connection combo with the available 
-        # connections
+        # Populate the PostGIS connection combo with the available connections
         
         # Determine our current preference
         s = QSettings()
@@ -60,8 +64,7 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
             self.readConfiguration()
         except:
             pass
-        
-        
+
     def readConfiguration(self, filePath=None):
         
         if filePath is None:
@@ -74,17 +77,17 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
         # First set up the TableWidget
         self.tableWidget.setColumnCount(6)
         
-        labels = [  'Constraint',
-                    'Schema',
-                    'Table',
-                    'Geometry Column',
-                    'Search Distance',
-                    'Columns For Reporting' ]
+        labels = ['Constraint',
+                  'Schema',
+                  'Table',
+                  'Geometry Column',
+                  'Search Distance',
+                  'Columns For Reporting']
         self.tableWidget.setHorizontalHeaderLabels(labels)
         
         # Read the config
         
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(filePath)
         
         i = 0
@@ -92,7 +95,7 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
             self.tableWidget.insertRow(i)
             
             editItem = QTableWidgetItem(section, 0)
-            editItem.setFlags( self.defFlags | Qt.ItemIsUserCheckable )
+            editItem.setFlags(self.defFlags | Qt.ItemIsUserCheckable)
             include = config.get(section, 'include')
             if include.lower() == 't':
                 editItem.setCheckState(Qt.Checked)
@@ -128,33 +131,33 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
             i += 1
         
         self.tableWidget.resizeColumnsToContents()
-        self.tableWidget.setSelectionBehavior( QAbstractItemView.SelectRows )
-        
-        
+        self.tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
+
     def exportConfiguration(self):
         """ User has opted to save the current configuration to a file """
         
         # Determine where we saved last time
         settings = QSettings()
         lastFolder = str(settings.value('constraintchecker/lastExportFolder', os.sep))
-        
-        exportFileName = str( QFileDialog.getSaveFileName(self, 'Export Current Configuration', lastFolder, 'Constraint Checker Configuration Files (*.ini)') )
+
+        exportFileName, ext_selector = QFileDialog.getSaveFileName(self, 'Export Current Configuration', lastFolder,
+                                                         'Constraint Checker Configuration Files (*.ini)')
         if len(exportFileName) == 0:
             # User cancelled
             return
         
         # Store the path we just looked in
         head, tail = os.path.split(exportFileName)
-        if head <> os.sep and head.lower() <> 'c:\\' and head <> '':
+        if head != os.sep and head.lower() != 'c:\\' and head != '':
             settings.setValue('constraintchecker/lastExportFolder', head)
         
         # Export the configuration
+        file_name = "{}.ini".format(exportFileName)
         try:
-            self.saveConfiguration(exportFileName)
+            self.saveConfiguration(file_name)
         except:
-            QMessageBox.critical(self.iface.mainWindow(), 'Error', 'Failed to write configuration to %s' % exportFileName)
-    
-    
+            QMessageBox.critical(self.iface.mainWindow(), 'Error', 'Failed to write configuration to %s' % file_name)
+
     def importConfiguration(self):
         """ User has opted to load a configuration from a file """
         
@@ -162,23 +165,24 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
         settings = QSettings()
         lastFolder = str(settings.value('constraintchecker/lastImportFolder', os.sep))
         
-        importFileName = str( QFileDialog.getOpenFileName(self, 'Import Configuration', lastFolder, 'Constraint Checker Configuration Files (*.ini)') )
+        importFileName, ext_selector = QFileDialog.getOpenFileName(self, 'Import Configuration', lastFolder,
+                                                         'Constraint Checker Configuration Files (*.ini)')
         if len(importFileName) == 0:
             # User cancelled
             return
         
         # Store the path we just looked in
         head, tail = os.path.split(importFileName)
-        if head <> os.sep and head.lower() <> 'c:\\' and head <> '':
+        if head != os.sep and head.lower() != 'c:\\' and head != '':
             settings.setValue('constraintchecker/lastImportFolder', head)
         
         # Import the configuration
         try:
             self.readConfiguration(importFileName)
         except:
-            QMessageBox.critical(self.iface.mainWindow(), 'Error', 'Failed to read configuration from %s' % exportFileName)
-        
-    
+            QMessageBox.critical(self.iface.mainWindow(), 'Error', 'Failed to read configuration from %s' %
+                                 importFileName)
+
     def saveConfiguration(self, filePath=None):
         """ Run through the configuration, do basic checks on each item 
         and save to the config file """
@@ -186,7 +190,7 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
         if filePath is None:
             filePath = self.configFilePath
         
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         for i in range(self.tableWidget.rowCount()):
             
             # Perform checks
@@ -196,21 +200,26 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
                 if len(valueString) == 0:
                     raise Exception('An empty value was seen in column %d, row %d' % (j+1, i+1))
                 # Check that the string is not blank
-                if j in [1,2,3]:
+                if j in [1, 2, 3]:
                     # Check that the string is db safe
                     if not dbSafe(valueString):
-                        raise Exception('The value in column %d, row %d contained illegal characters. Please ensure the value consists of only letters, numbers, spaces and underscores.' % (j+1, i+1))
+                        raise Exception('The value in column %d, row %d contained illegal characters. '
+                                        'Please ensure the value consists of only letters, numbers, spaces '
+                                        'and underscores.' % (j+1, i+1))
                 if j == 5:
                     # Split the string and check each component is db safe
                     for val in valueString.split(','):
                         if not dbSafe(val):
-                            raise Exception('The value in column %d, row %d contained illegal characters. Please ensure the value consists of a comma seperated list of only letters, numbers, spaces and underscores.' % (j+1, i+1))
+                            raise Exception('The value in column %d, row %d contained illegal characters. '
+                                            'Please ensure the value consists of a comma separated list of only '
+                                            'letters, numbers, spaces and underscores.' % (j+1, i+1))
                 if j == 4:
                     # Check the string is a number
                     try:
                         dummy = float(valueString)
                     except:
-                        raise Exception('The value in column %d, row %d (%s) does not appear to be a valid number.' % ((j+1), (i+1), valueString))
+                        raise Exception('The value in column %d, row %d (%s) does not appear to be a valid number.' %
+                                        ((j+1), (i+1), valueString))
                 
                 if j == 0:
                     name = valueString
@@ -231,13 +240,11 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
                     config.set(name, 'columns', valueString)
                     
             try:
-                with open(filePath, 'wb') as configfile:
-                    config.write(configfile)
+                with open(filePath, 'w') as config_file:
+                    config.write(config_file)
             except:
                 raise Exception('Failed to write the configuration to %s' % filePath)
-            
-    
-    
+
     def removeSelectedRows(self):
         selRanges = self.tableWidget.selectedRanges()
         rowsToRemove = []
@@ -248,20 +255,18 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
         rowsToRemove.reverse()
         for row in rowsToRemove:
             self.tableWidget.removeRow(row)
-    
-    
+
     def insertNewRow(self):
         self.tableWidget.insertRow(self.tableWidget.rowCount())
         for i in range(self.tableWidget.columnCount()):
             editItem = QTableWidgetItem('', 0)
             if i == 0:
-                editItem.setFlags( self.defFlags | Qt.ItemIsUserCheckable )
+                editItem.setFlags(self.defFlags | Qt.ItemIsUserCheckable)
                 editItem.setCheckState(Qt.Checked)
             else:
-                editItem.setFlags( self.defFlags )
+                editItem.setFlags(self.defFlags)
             self.tableWidget.setItem(self.tableWidget.rowCount()-1, i, editItem)
-    
-    
+
     def accept(self):
         
         # Set our connection preference based on the combo-box
@@ -273,7 +278,9 @@ class ConfigurationDialog(QDialog, Ui_Dialog):
         try:
             self.saveConfiguration()
         except:
-            QMessageBox.critical(self, 'Error Saving Configuration', 'An error occured when trying to save the configuration. The details are:\n\n%s' % traceback.format_exc())
+            msg = 'An error occurred when trying to save the configuration. ' \
+                  'The details are:\n\n%s' % traceback.format_exc()
+            QMessageBox.critical(self, 'Error Saving Configuration', msg)
             return
         
         QDialog.accept(self)

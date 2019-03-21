@@ -22,5 +22,5 @@
 
 def classFactory(iface):
     # load ConstraintChecker class from file ConstraintChecker
-    from constraintchecker import ConstraintChecker
+    from .constraintchecker import ConstraintChecker
     return ConstraintChecker(iface)

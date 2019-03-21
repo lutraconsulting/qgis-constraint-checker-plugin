@@ -20,24 +20,24 @@
  ***************************************************************************/
 """
 
-# Import the PyQt and QGIS libraries
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from qgis.core import *
-# Initialize Qt resources from file resources.py
-import resources_rc
-# Import the code for the dialog
-from reference_number_dialog import ReferenceNumberDialog
-from checker import Checker
-from configuration_dialog import ConfigurationDialog
-from freehand_polygon_maptool import *
 import os.path
 import traceback
+
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction, QDialog, QMessageBox
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
+from qgis.core import QgsMapLayer, Qgis
+
+
+# Import the code for the dialog
+from .reference_number_dialog import ReferenceNumberDialog
+from .checker import Checker
+from .configuration_dialog import ConfigurationDialog
+from .freehand_polygon_maptool import *
 
 
 class ConstraintChecker:
 
-    
     def __init__(self, iface):
         # Save reference to the QGIS interface
         self.iface = iface
@@ -58,19 +58,18 @@ class ConstraintChecker:
         # self.dlg = ConstraintCheckerDialog()
         
         self.freeHandTool = FreehandPolygonMaptool(self.iface.mapCanvas())
-        
-    
+
     def initGui(self):
         # Create action that will start plugin configuration
         self.existingCheckAction = QAction(
-            QIcon(":/plugins/constraintchecker/checker_select_32.png"),
-            u"Check Constraints for Existing Polygon", self.iface.mainWindow())
+            QIcon(os.path.join(self.plugin_dir, "images/checker_select_32.png")),
+            "Check Constraints for Existing Polygon", self.iface.mainWindow())
         self.freehandCheckAction = QAction(
-            QIcon(":/plugins/constraintchecker/checker_freehand_32.png"),
-            u"Check Constraints for Free-hand Polygon", self.iface.mainWindow())
+            QIcon(os.path.join(self.plugin_dir, "images/checker_freehand_32.png")),
+            "Check Constraints for Free-hand Polygon", self.iface.mainWindow())
         self.openConfigurationAction = QAction(
-            QIcon(":/plugins/constraintchecker/checker_config_32.png"),
-            u"Edit Configuration", self.iface.mainWindow())
+            QIcon(os.path.join(self.plugin_dir, "images/checker_config_32.png")),
+            "Edit Configuration", self.iface.mainWindow())
         # connect the action to the run method
         self.existingCheckAction.triggered.connect(self.checkExistingGeometry)
         self.freehandCheckAction.triggered.connect(self.checkFreehandGeometry)
@@ -79,28 +78,25 @@ class ConstraintChecker:
         # Add toolbar button and menu item
         self.iface.addToolBarIcon(self.existingCheckAction)
         self.iface.addToolBarIcon(self.freehandCheckAction)
-        self.iface.addPluginToMenu(u"&Constraint Checker", self.existingCheckAction)
-        self.iface.addPluginToMenu(u"&Constraint Checker", self.freehandCheckAction)
-        self.iface.addPluginToMenu(u"&Constraint Checker", self.openConfigurationAction)
-        QObject.connect(self.freeHandTool, SIGNAL("geometryReady(PyQt_PyObject)"), self.receiveFeature)
+        self.iface.addPluginToMenu("&Constraint Checker", self.existingCheckAction)
+        self.iface.addPluginToMenu("&Constraint Checker", self.freehandCheckAction)
+        self.iface.addPluginToMenu("&Constraint Checker", self.openConfigurationAction)
+        self.freeHandTool.trigger.connect(self.receiveFeature)
 
-    
     def unload(self):
         # Remove the plugin menu item and icon
-        self.iface.removePluginMenu(u"&Constraint Checker", self.existingCheckAction)
-        self.iface.removePluginMenu(u"&Constraint Checker", self.freehandCheckAction)
-        self.iface.removePluginMenu(u"&Constraint Checker", self.openConfigurationAction)
+        self.iface.removePluginMenu("&Constraint Checker", self.existingCheckAction)
+        self.iface.removePluginMenu("&Constraint Checker", self.freehandCheckAction)
+        self.iface.removePluginMenu("&Constraint Checker", self.openConfigurationAction)
         self.iface.removeToolBarIcon(self.existingCheckAction)
         self.iface.removeToolBarIcon(self.freehandCheckAction)
-        QObject.disconnect(self.freeHandTool, SIGNAL("geometryReady(PyQt_PyObject)"), self.receiveFeature)
-        
+        self.freeHandTool.trigger.disconnect()
     
     def receiveFeature(self, geom):
-        crs = self.iface.mapCanvas().mapRenderer().destinationCrs()
-        epsg = int( crs.authid().split('EPSG:')[1] )
-        self.iface.mapCanvas().unsetMapTool( self.freeHandTool )
+        crs = self.iface.mapCanvas().mapSettings().destinationCrs()
+        epsg = int(crs.authid().split('EPSG:')[1])
+        self.iface.mapCanvas().unsetMapTool(self.freeHandTool)
         self.constraintCheck(geom, epsg)
-
     
     def checkExistingGeometry(self):
         """ The user should already have a feature selected.  Ensure 
@@ -129,24 +125,24 @@ class ConstraintChecker:
         # Due to an existing bug ? 777
         # We need to fetch the list first before taking off the feature we want
         selFeats = currentLayer.selectedFeatures()
-        geom = QgsGeometry( selFeats[0].geometry() )
+        geom = QgsGeometry(selFeats[0].geometry())
         authid = currentLayer.crs().authid()
         try:
             epsg = int(authid.split('EPSG:')[1])
         except:
-            QMessageBox.critical(self.iface.mainWindow(), 'Failed to determine CRS', 'Please ensure the layer to which the query feature belongs has a CRS set.')
+            msg = 'Please ensure the layer to which the query feature belongs has a CRS set.'
+            QMessageBox.critical(self.iface.mainWindow(), 'Failed to determine CRS', msg)
             return
         self.constraintCheck(geom, epsg)
-        
-    
+
     def checkFreehandGeometry(self):
         
-        self.iface.messageBar().pushMessage("Constraint Checker", \
-            "Please digitise your area of interest - Right-click to add last vertex.", \
-            level=QgsMessageBar.INFO, duration=10)
+        self.iface.messageBar().pushMessage("Constraint Checker",
+                                            "Please digitise your area of interest - Right-click to add last vertex.",
+                                            level=Qgis.Info,
+                                            duration=10)
         self.iface.mapCanvas().setMapTool(self.freeHandTool)
-        
-    
+
     def constraintCheck(self, queryGeom, epsg):
         
         # Prompt the user for a reference number
@@ -163,25 +159,10 @@ class ConstraintChecker:
             c.check(queryGeom, epsg)
             c.display()
         except:
-            QMessageBox.critical(self.iface.mainWindow(), 'Query Failed', 'The query failed and the detailed error was:\n\n%s' % traceback.format_exc() )
-        
-    
+            msg = 'The query failed and the detailed error was:\n\n%s' % traceback.format_exc()
+            QMessageBox.critical(self.iface.mainWindow(), 'Query Failed', msg)
+
     def openConfiguration(self):
         # Display the configuration editor dialog
-        d = ConfigurationDialog()
+        d = ConfigurationDialog(self.iface)
         d.exec_()
-        
-        
-    """
-    # run method that performs all the real work
-    def run(self):
-        # show the dialog
-        self.dlg.show()
-        # Run the dialog event loop
-        result = self.dlg.exec_()
-        # See if OK was pressed
-        if result == 1:
-            # do something useful (delete the line containing pass and
-            # substitute with your code)
-            pass
-    """
