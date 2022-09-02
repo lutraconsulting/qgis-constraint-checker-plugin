@@ -164,11 +164,16 @@ class Checker(object):
         except KeyError:
             pass
 
-        dbConn = psycopg2.connect(database=database,
-                                  user=user,
-                                  password=password,
-                                  host=host,
-                                  port=port)
+        if not user or not password:
+            dbConn = psycopg2.connect(database=database,
+                                      host=host,
+                                      port=port)
+        else:
+            dbConn = psycopg2.connect(database=database,
+                                      user=user,
+                                      password=password,
+                                      host=host,
+                                      port=port)
         dbConn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         return dbConn.cursor()
 
