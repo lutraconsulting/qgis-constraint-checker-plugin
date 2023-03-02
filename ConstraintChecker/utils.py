@@ -21,6 +21,10 @@
 """
 
 import string
+from qgis.core import QgsApplication, QgsAuthMethodConfig, QgsSettings
+
+DEBUG = False
+
 
 def dbSafe(s):
     """ Returns true if this string is considered safe to use as a DB 
@@ -29,7 +33,34 @@ def dbSafe(s):
     safeChars = string.digits + string.ascii_letters + '_ '
     
     for char in s:
-        if not char in safeChars:
+        if char not in safeChars:
             return False
     return True
         
+
+def get_db_conn_details(conn_name):
+    s = QgsSettings()
+    s.beginGroup("/PostgreSQL/connections")
+    if conn_name not in s.childGroups():
+        raise Exception(f"No connection named {conn_name} in QGIS settings!")
+    s.endGroup()
+    s.beginGroup(f"/PostgreSQL/connections/{conn_name}")
+    host = s.value("host", "")
+    database = s.value("database", "")
+    username = s.value("username", "")
+    password = s.value("password", "")
+    port = int(s.value("port", 5432))
+    authcfg = s.value("authcfg", None)
+
+    if DEBUG:
+        print(f"Conn details: {host}, {database}, {username}, {len(password)}, {port}")
+
+    if authcfg:
+        conf = QgsAuthMethodConfig()
+        auth_manager = QgsApplication.authManager()
+        auth_manager.loadAuthenticationConfig(authcfg, conf, True)
+        if conf.id():
+            username = conf.config("username", "")
+            password = conf.config("password", "")
+
+    return host, database, username, password, port
