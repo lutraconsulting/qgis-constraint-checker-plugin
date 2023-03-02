@@ -25,9 +25,10 @@ import os
 # Import the PyQt and QGIS libraries
 from qgis.PyQt.QtCore import Qt, QAbstractTableModel, QModelIndex, QAbstractItemModel, QSettings
 from qgis.PyQt.QtWidgets import QMessageBox
-from qgis.core import QgsAuthMethodConfig, QgsApplication
+from qgis.core import Qgis, QgsMessageLog
 
 from .constraint_results_dialog import ConstraintResultsDialog
+from .utils import DEBUG, get_db_conn_details
 
 
 class ResultModel(QAbstractTableModel):
@@ -147,28 +148,23 @@ class Checker(object):
             # Looks like the preferred connection could not be found
             raise Exception('The preferred PostGIS connection, '
                             '%s could not be found, please check your Constrain Checker settings')
-        database = str(s.value("PostgreSQL/connections/%s/database" % selectedConnection, ''))
-        user = str(s.value("PostgreSQL/connections/%s/username" % selectedConnection, ''))
-        password = str(s.value("PostgreSQL/connections/%s/password" % selectedConnection, ''))
-        port = int(s.value("PostgreSQL/connections/%s/port" % selectedConnection, 5432))
 
-        auth_manager = QgsApplication.authManager()
-        conf = QgsAuthMethodConfig()
-        configs = {v.name(): k for k, v in auth_manager.availableAuthMethodConfigs().items()}
-        # name of config in auth must match the name of selected connection
-        try:
-            auth_manager.loadAuthenticationConfig(configs[selectedConnection], conf, True)
-            if conf.id():
-                user = conf.config('username', '')
-                password = conf.config('password', '')
-        except KeyError:
-            pass
+        host, database, username, password, port = get_db_conn_details(selectedConnection)
+        if DEBUG:
+            conn_info = f"host: {host}, db:{database}, user: {username}, pass={len(password)}, port={port}"
+            QgsMessageLog.logMessage(f"Constraint checker conn info: {conn_info}", 'Constraint Checker', level=Qgis.Info)
 
-        dbConn = psycopg2.connect(database=database,
-                                  user=user,
-                                  password=password,
-                                  host=host,
-                                  port=port)
+        if not username or not password:
+            # Active Directory authentication possible
+            dbConn = psycopg2.connect(database=database,
+                                      host=host,
+                                      port=port)
+        else:
+            dbConn = psycopg2.connect(database=database,
+                                      user=username,
+                                      password=password,
+                                      host=host,
+                                      port=port)
         dbConn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         return dbConn.cursor()
 
